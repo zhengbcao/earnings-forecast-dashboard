@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A股2026Q1业绩预告看板</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f0f2f5;
+    color: #1e293b;
+    font-size: 13px;
+    line-height: 1.5;
+}
+.container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 20px;
+}
+header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 6px;
+}
+header .subtitle {
+    color: #64748b;
+    font-size: 13px;
+}
+
+/* 汇总卡片 */
+.summary-cards {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.summary-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 12px 20px;
+    min-width: 100px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.summary-card .label { color: #64748b; font-size: 12px; margin-bottom: 4px; }
+.summary-card .value { font-size: 22px; font-weight: 700; }
+.type-预增 .value, .type-预盈 .value { color: #dc2626; }
+.type-略增 .value { color: #ea580c; }
+.type-预减 .value, .type-预亏 .value { color: #16a34a; }
+.type-略减 .value { color: #059669; }
+.type-扭亏 .value { color: #2563eb; }
+.type-续亏 .value { color: #7c3aed; }
+.type-首亏 .value { color: #9333ea; }
+
+/* 筛选栏 */
+.filter-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+    background: #fff;
+    padding: 12px 16px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.filter-bar label { color: #64748b; font-size: 12px; }
+.filter-bar select, .filter-bar input {
+    padding: 6px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 13px;
+    outline: none;
+    background: #fff;
+}
+.filter-bar select:focus, .filter-bar input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+}
+.filter-bar .count { margin-left: auto; color: #64748b; font-size: 12px; }
+
+/* 表格容器 */
+.table-container {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    overflow-x: auto;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    white-space: nowrap;
+}
+thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #f8fafc;
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    border-bottom: 2px solid #e2e8f0;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+}
+thead th:hover { background: #e2e8f0; }
+thead th .sort-arrow { font-size: 10px; margin-left: 4px; opacity: 0.4; }
+thead th.sorted .sort-arrow { opacity: 1; color: #3b82f6; }
+tbody td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+tbody tr:hover { background: #f0f7ff; }
+tbody tr:nth-child(even) { background: #fafbfc; }
+tbody tr:nth-child(even):hover { background: #f0f7ff; }
+
+/* 股票代码 */
+.stock-code {
+    font-family: "SF Mono", "Cascadia Code", "Consolas", monospace;
+    color: #3b82f6;
+    font-weight: 500;
+}
+.stock-name { font-weight: 500; }
+.industry-tag {
+    display: inline-block;
+    background: #f1f5f9;
+    color: #475569;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+}
+.forecast-type {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+.ft-预增, .ft-预盈 { background: #fef2f2; color: #dc2626; }
+.ft-略增 { background: #fff7ed; color: #ea580c; }
+.ft-预减, .ft-预亏 { background: #f0fdf4; color: #16a34a; }
+.ft-略减 { background: #ecfdf5; color: #059669; }
+.ft-扭亏 { background: #eff6ff; color: #2563eb; }
+.ft-续亏 { background: #faf5ff; color: #7c3aed; }
+.ft-首亏 { background: #faf5ff; color: #9333ea; }
+
+/* 增长率 (A股惯例: 红涨绿跌) */
+.growth-positive { color: #dc2626; font-weight: 600; }
+.growth-negative { color: #16a34a; font-weight: 600; }
+.growth-na { color: #94a3b8; }
+.growth-cell { text-align: right; font-size: 12px; }
+.growth-label { color: #94a3b8; font-size: 10px; }
+
+/* 迷你柱状图 */
+td.sparkline-cell { padding: 4px 6px; }
+.sparkline-wrapper {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+}
+.sparkline-tooltip {
+    display: none;
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e293b;
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    white-space: pre-line;
+    z-index: 100;
+    min-width: 120px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    pointer-events: none;
+}
+.sparkline-wrapper:hover .sparkline-tooltip { display: block; }
+
+/* 分组表头 */
+.col-group-revenue { background: #fef7f0 !important; }
+.col-group-deducted { background: #f0f7fe !important; }
+.col-group-net { background: #f0fef5 !important; }
+
+/* 无数据 */
+.no-data { color: #cbd5e1; text-align: center; padding: 40px; font-size: 15px; }
+</style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>A股2026Q1业绩预告看板</h1>
+        <div class="subtitle">数据来源: 东方财富 &nbsp;|&nbsp; 共 <span id="total-count">34</span> 家公司 &nbsp;|&nbsp; 生成时间: 2026-03-30 22:32</div>
+    </header>
+
+    <div class="summary-cards" id="summary-cards"></div>
+
+    <div class="filter-bar">
+        <div>
+            <label>行业</label><br>
+            <select id="filter-industry"><option value="">全部行业</option></select>
+        </div>
+        <div>
+            <label>预告类型</label><br>
+            <select id="filter-type"><option value="">全部类型</option></select>
+        </div>
+        <div>
+            <label>搜索</label><br>
+            <input id="filter-search" type="text" placeholder="代码或名称..." style="width:160px">
+        </div>
+        <div class="count">显示 <strong id="shown-count">0</strong> / 34 家</div>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr id="table-header"></tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+const STOCK_DATA = [{"code": "001257", "name": "盛龙股份", "industry": "小金属", "forecast_date": "2026-03-26", "forecast_type": "续盈", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [null, null, null, null, 1357726100.0, 931373945.1199999, 693501954.8800001, 519910845.96000004, 1315000000.0], "net_profit": [null, null, null, null, 371181900.0, 232581728.25, 204219371.75, 75935343.79999995, 365000000.0], "deducted_profit": [null, null, null, null, 369000000.0, 229000000.0, 201000000.0, 70999999.99999988, 360000000.0], "revenue_yoy": -3.15, "revenue_qoq": 152.93, "net_profit_yoy": -1.67, "net_profit_qoq": 380.67, "deducted_profit_yoy": -2.44, "deducted_profit_qoq": 407.04}, {"code": "001312", "name": "福恩股份", "industry": "—", "forecast_date": "2026-03-31", "forecast_type": "略增", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [null, null, null, null, null, null, null, null, 383970800.0], "net_profit": [null, null, null, null, null, null, null, null, 41007800.0], "deducted_profit": [null, null, null, null, 36182900.0, 63817100.0, 61000000.0, 50000000.0, 38144200.0], "revenue_yoy": null, "revenue_qoq": null, "net_profit_yoy": null, "net_profit_qoq": null, "deducted_profit_yoy": 5.42, "deducted_profit_qoq": -23.71}, {"code": "002082", "name": "万邦德", "industry": "化学制药", "forecast_date": "2026-03-07", "forecast_type": "预增", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [429172675.52, 323625271.89, 321693192.57000005, 368874083.1199999, 315110184.08, 263441860.20999998, 439154394.07000005, null, null], "net_profit": [28838483.33, 8865633.840000004, 8001885.68, 9734968.589999996, 15201816.26, -1738361.0099999998, -8995682.8, -203244972.45, 165000000.0], "deducted_profit": [14097300.0, 3975600.0, -13763600.0, 9548100.0, -7905300.0, -16209000.0, -12608900.0, null, 164000000.0], "revenue_yoy": null, "revenue_qoq": null, "net_profit_yoy": 985.4, "net_profit_qoq": 181.18, "deducted_profit_yoy": 2174.56, "deducted_profit_qoq": null}, {"code": "002532", "name": "天山铝业", "industry": "工业金属", "forecast_date": "2026-03-30", "forecast_type": "预增", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [6825089442.22, 6959705179.97, 7010805078.780001, 7293827643.599998, 7925025818.02, 7402803816.799999, 6993546984.98, 7180778278.130001, null], "net_profit": [719819784.57, 1353689252.81, 1010484998.4099998, 1371413902.67, 1058092960.94, 1026056244.9199998, 1256017723.6299999, 1477680572.63, 2200000000.0], "deducted_profit": [706000000.0, 1255000000.0, 1000000000.0, 1348000000.0, 1038000000.0000001, 922999999.9999999, 1239000000.0, 1460000000.0, 2185000000.0], "revenue_yoy": null, "revenue_qoq": null, "net_profit_yoy": 107.92, "net_profit_qoq": 48.88, "deducted_profit_yoy": 110.5, "deducted_profit_qoq": 49.66}, {"code": "002810", "name": "山东赫达", "industry": "化学制品", "forecast_date": "2026-03-28", "forecast_type": "预增", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [435373486.1, 499835280.78, 499955482.9599999, 521339266.3200002, 466929368.03, 504806847.86, 464955404.7299999, null, null], "net_profit": [53602901.24, 70323006.27000001, 74119850.08, 23589114.049999982, 45169304.48, 67967773.85, 26185833.040000007, 11092988.629999995, 94855550.0], "deducted_profit": [51231700.0, 64768299.999999985, 64000000.000000015, 13000000.0, 40448100.0, 64551900.0, 25000000.0, null, 93030600.0], "revenue_yoy": null, "revenue_qoq": null, "net_profit_yoy": 110.0, "net_profit_qoq": 755.09, "deducted_profit_yoy": 130.0, "deducted_profit_qoq": null}, {"code": "300054", "name": "鼎龙股份", "industry": "电子化学品Ⅱ", "forecast_date": "2026-03-27", "forecast_type": "预增", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [707994878.1, 810825697.07, 906918128.1100001, 911904246.1799998, 823874564.84, 907646249.4699999, 966546317.5999999, 961839885.2400002, null], "net_profit": [81575829.89, 136264622.98000002, 158482197.99, 144373803.57, 140992818.63, 170049544.56, 208375325.69, 200786850.72000003, 250000000.0], "deducted_profit": [65847800.0, 131152200.0, 146000000.0, 126000000.00000006, 135000000.0, 159000000.0, 201000000.0, 183000000.0, 240000000.0], "revenue_yoy": null, "revenue_qoq": null, "net_profit_yoy": 77.31, "net_profit_qoq": 24.51, "deducted_profit_yoy": 77.78, "deducted_profit_qoq": 31.15}, {"code": "300138", "name": "晨光生物", "industry": "农产品加工", "forecast_date": "2026-03-31", "forecast_type": "续盈", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [1732327232.51, 1758602695.36, 1734499040.21, 1768763818.1499996, 1716472687.32, 1941075039.39, 1389706738.8599997, 1511789262.8100004, null], "net_profit": [38591936.61, 61242687.33, -37228735.86, 31443734.060000002, 109480325.98, 105491048.29, 88857708.12999997, 65041998.28000003, 102500000.0], "deducted_profit": [48487200.0, 31550500.0, -65485000.0, 29702800.0, 95923700.00000001, 88076299.99999999, 72000000.0, 23000000.0, 95500000.0], "revenue_yoy": null, "revenue_qoq": null, "net_profit_yoy": -6.38, "net_profit_qoq": 57.59, "deducted_profit_yoy": -0.44, "deducted_profit_qoq": 315.22}, {"code": "300190", "name": "维尔利", "industry": "环境治理", "forecast_date": "2026-03-20", "forecast_type": "扭亏", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [383876573.19, 620469803.0999999, 452442536.8299999, 590841518.4200001, 349294265.8, 445775885.2, 482747834.1099999, null, null], "net_profit": [36953367.45, 5254996.359999999, -28853926.660000004, -749756356.86, -54719922.96, 17880683.79, 44879103.42, -356164464.25, 5000000.0], "deducted_profit": [-35196200.0, -12882100.0, -30234700.0, -734687000.0000001, -55843700.0, 13121900.0, 41797100.0, null, 4850000.0], "revenue_yoy": null, "revenue_qoq": null, "net_profit_yoy": 109.14, "net_profit_qoq": 101.4, "deducted_profit_yoy": 108.68, "deducted_profit_qoq": null}, {"code": "300497", "name": "富祥药业", "industry": "化学制药", "forecast_date": "2026-03-24", "forecast_type": "预增", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [340430593.83, 341983786.64000005, 294461087.88, 200971134.30000007, 233698855.18, 280975204.88, 254677075.45, null, null], "net_profit": [1468451.11, -23927700.36, -39615709.98, -210025591.29999998, 2238811.99, -9149962.64, -55840375.42, 9683826.07, 63500000.0], "deducted_profit": [-10002100.0, -39433800.0, -44753100.0, -210811000.0, -22599600.0, -9580200.0, -56813800.0, null, 61500000.0], "revenue_yoy": null, "revenue_qoq": null, "net_profit_yoy": 2736.33, "net_profit_qoq": 555.73, "deducted_profit_yoy": 372.13, "deducted_profit_qoq": null}, {"code": "300531", "name": "优博讯", "industry": "计算机设备", "forecast_date": "2026-03-23", "forecast_type": "预增", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [317787561.49, 307806058.86, 309710691.65, 285885642.05999994, 352841921.23, 388873890.98, 434494614.68000007, null, null], "net_profit": [1849798.17, 995393.0800000001, 14616019.48, -167926900.1, 21201818.72, 23051435.840000004, 40225431.67, 779113.7699999958, 43000000.0], "deducted_profit": [7390599.999999999, 5098900.000000001, 4684800.0, -157174300.0, 19452500.0, 22279100.0, 41391200.0, null, 41000000.0], "revenue_yoy": null, "revenue_qoq": null, "net_profit_yoy": 102.81, "net_profit_qoq": 5419.09, "deducted_profit_yoy": 110.77, "deducted_profit_qoq": null}, {"code": "301513", "name": "尚水智能", "industry": "电池", "forecast_date": "2026-03-27", "forecast_type": "略减", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [null, null, null, null, 278622500.0, 119084808.86000001, 169776691.14, 242231430.08000004, 335000000.0], "net_profit": [null, null, null, null, 48800500.0, 44905709.2, 28055190.799999997, 38853463.5, 36000000.0], "deducted_profit": [null, null, null, null, 48666500.0, 44947200.000000015, 28386299.999999985, 38000000.0, 36000000.0], "revenue_yoy": 20.23, "revenue_qoq": 38.3, "net_profit_yoy": -26.23, "net_profit_qoq": -7.34, "deducted_profit_yoy": -26.03, "deducted_profit_qoq": -5.26}, {"code": "301666", "name": "大普微", "industry": "计算机设备", "forecast_date": "2026-03-26", "forecast_type": "扭亏", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [null, null, null, null, 297019000.0, 451153794.6, 515782005.4, 1024734449.9200001, 1025000000.0], "net_profit": [null, null, null, null, -123760900.0, -230001141.70999998, -86837358.29000002, -40072289.100000024, 67500000.0], "deducted_profit": [null, null, null, null, -126000000.0, -235000000.0, -88000000.0, -39999999.99999994, 66500000.0], "revenue_yoy": 245.1, "revenue_qoq": 0.03, "net_profit_yoy": 154.54, "net_profit_qoq": 268.45, "deducted_profit_yoy": 152.78, "deducted_profit_qoq": 266.25}, {"code": "301680", "name": "固德电材", "industry": "汽车零部件", "forecast_date": "2026-03-03", "forecast_type": "略增", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [177494500.0, null, null, null, 240432100.0, 217184013.70999998, 292512186.29, 355662718.22, 355000000.0], "net_profit": [30645200.0, null, null, null, 48176100.0, 32984395.67, 36731204.33, 61262850.389999986, 49700000.0], "deducted_profit": [30183600.0, null, null, null, 47639799.99999999, 32674200.000000007, 35685999.999999985, 60000000.000000015, 49500000.0], "revenue_yoy": 47.65, "revenue_qoq": -0.19, "net_profit_yoy": 3.16, "net_profit_qoq": -18.87, "deducted_profit_yoy": 3.9, "deducted_profit_qoq": -17.5}, {"code": "301682", "name": "宏明电子", "industry": "军工电子Ⅱ", "forecast_date": "2026-03-20", "forecast_type": "略增", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [null, null, null, null, 819203900.0, 708815379.74, 585341620.26, 503303700.59000015, 833000000.0], "net_profit": [null, null, null, null, 138230900.0, 118536900.96000001, 46311299.03999999, 15642865.670000017, 141700000.0], "deducted_profit": [null, null, null, null, 137000000.0, 112000000.00000003, null, null, 139660000.0], "revenue_yoy": 1.68, "revenue_qoq": 65.51, "net_profit_yoy": 2.51, "net_profit_qoq": 805.84, "deducted_profit_yoy": 1.94, "deducted_profit_qoq": null}, {"code": "301683", "name": "慧谷新材", "industry": "化学制品", "forecast_date": "2026-03-26", "forecast_type": "略增", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [null, null, null, null, 238775100.0, 257231945.13, 228010254.87, 261166156.98000002, 267500000.0], "net_profit": [null, null, null, null, 56707100.0, 50366414.010000005, 51527885.989999995, 48184997.50999999, 65000000.0], "deducted_profit": [null, null, null, null, 56782800.0, 50217200.0, 51000000.0, 46999999.99999997, 64880000.0], "revenue_yoy": 12.03, "revenue_qoq": 2.43, "net_profit_yoy": 14.62, "net_profit_qoq": 34.9, "deducted_profit_yoy": 14.26, "deducted_profit_qoq": 38.04}, {"code": "301696", "name": "三瑞智能", "industry": "航空装备Ⅱ", "forecast_date": "2026-03-19", "forecast_type": "略增", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [null, null, null, null, 193628500.0, 242008639.11, 373212560.89, 265836175.51999998, 275000000.0], "net_profit": [null, null, null, null, 82704000.0, 77555467.97, 157292332.03, 103816027.95999998, 109000000.0], "deducted_profit": [null, null, null, null, 72731500.0, 80268500.0, 154000000.0, 98999999.99999994, 103000000.0], "revenue_yoy": 42.02, "revenue_qoq": 3.45, "net_profit_yoy": 31.8, "net_profit_qoq": 4.99, "deducted_profit_yoy": 41.62, "deducted_profit_qoq": 4.04}, {"code": "603293", "name": "埃泰克", "industry": "汽车零部件", "forecast_date": "2026-03-27", "forecast_type": "略增", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [null, null, null, null, 745835000.0, 775674033.1300001, 944680766.8699999, 1142723063.02, 790000000.0], "net_profit": [null, null, null, null, 54078300.0, 38382570.56999999, 80563029.43, 72695950.00999999, 56500000.0], "deducted_profit": [null, null, null, null, 54371700.0, 31241200.000000015, 77387099.99999999, 68000000.0, 55500000.0], "revenue_yoy": 5.92, "revenue_qoq": -30.87, "net_profit_yoy": 4.48, "net_profit_qoq": -22.28, "deducted_profit_yoy": 2.08, "deducted_profit_qoq": -18.38}, {"code": "603459", "name": "红板科技", "industry": "元件", "forecast_date": "2026-03-19", "forecast_type": "略增", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [null, null, null, null, 775298600.0, 934719532.5999999, 1016131567.4000001, 950866473.02, 925000000.0], "net_profit": [null, null, null, null, 108253400.0, 131598721.68, 173423978.32, 126572408.03999996, 122500000.0], "deducted_profit": [null, null, null, null, 105000000.0, 128000000.0, 168999999.99999994, 119000000.00000006, 117500000.0], "revenue_yoy": 19.31, "revenue_qoq": -2.72, "net_profit_yoy": 13.16, "net_profit_qoq": -3.22, "deducted_profit_yoy": 11.9, "deducted_profit_qoq": -1.26}, {"code": "603501", "name": "豪威集团", "industry": "半导体", "forecast_date": "2026-03-31", "forecast_type": "略减", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [5643808881.3, 6447597826.28, 6816977098.74, 6822255331.799999, 6472102098.4, 7483713041.32, 7826812603.15, 7072177774.620003, 6325000000.0], "net_profit": [557792077.38, 809221422.4899999, 1008283860.3000002, 947945389.73, 865970220.63, 1161909591.8899999, 1182332352.4900002, 835204365.3199997, null], "deducted_profit": [566000000.0, 806000000.0, 921000000.0, 764000000.0, 848000000.0, 1103000000.0000002, 1108999999.9999998, 850000000.0, null], "revenue_yoy": -2.27, "revenue_qoq": -10.57, "net_profit_yoy": null, "net_profit_qoq": null, "deducted_profit_yoy": null, "deducted_profit_qoq": null}, {"code": "603826", "name": "坤彩科技", "industry": "非金属材料Ⅱ", "forecast_date": "2026-03-28", "forecast_type": "预增", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [254965318.17, 276940089.22, 261702571.53999996, 176285382.9000001, 257794790.51, 314612312.28, 283513030.71000004, null, 415000000.0], "net_profit": [20302368.75, 23842215.86, 16243980.29, -25245578.32, 23851357.03, 25560483.32, 11661869.199999996, -153969209.55, 70000000.0], "deducted_profit": [17121000.0, 22604000.0, 13293900.0, -19332600.0, 21659300.0, 24458100.0, 9397900.0, null, 70000000.0], "revenue_yoy": 60.98, "revenue_qoq": null, "net_profit_yoy": 193.48, "net_profit_qoq": 145.46, "deducted_profit_yoy": 223.19, "deducted_profit_qoq": null}, {"code": "688041", "name": "海光信息", "industry": "半导体", "forecast_date": "2026-02-26", "forecast_type": "略增", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [1592079880.4, 2170832738.13, 2373626390.69, 3025609126.7, 2400148814.98, 3064086242.1699996, 4025739773.970001, null, 4065000000.0], "net_profit": [288537305.29, 564858640.3699999, 672322399.64, 405272165.21000004, 505894195.29, 695557645.8600001, 759994598.3699999, 580817660.48, 670000000.0], "deducted_profit": [272000000.0, 546000000.0, 657000000.0, 341000000.0, 442000000.0, 648000000.0, 727000000.0000002, null, 560000000.0], "revenue_yoy": 69.36, "revenue_qoq": null, "net_profit_yoy": 32.44, "net_profit_qoq": 15.35, "deducted_profit_yoy": 26.7, "deducted_profit_qoq": null}, {"code": "688059", "name": "华锐精密", "industry": "通用设备", "forecast_date": "2026-03-31", "forecast_type": "预增", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [170222225.35, 240197416.70000002, 174095528.49999994, 174542109.9100001, 222099270.64, 297008318.93, 251558562.01000005, null, null], "net_profit": [17190764.97, 54746970.010000005, 5118661.039999992, 29902704.92, 29224020.88, 56235646.27000001, 51986090.19, 49317142.66, 170000000.0], "deducted_profit": [16480800.0, 54376600.0, 4535200.0, 28607400.0, 28230400.0, 55604700.0, 52164900.0, null, 160000000.0], "revenue_yoy": null, "revenue_qoq": null, "net_profit_yoy": 481.71, "net_profit_qoq": 244.71, "deducted_profit_yoy": 466.76, "deducted_profit_qoq": null}, {"code": "688257", "name": "新锐股份", "industry": "通用设备", "forecast_date": "2026-03-31", "forecast_type": "预增", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [394420245.84, 489837727.64000005, 469570096.6600001, 508005017.0899999, 528305638.31, 612100200.6700001, 648104035.9000001, null, 1075000000.0], "net_profit": [42984391.78, 55018129.650000006, 36804990.56999999, 45926292.129999995, 46188475.36, 54637946.86, 64557504.66, 71219673.12, 295000000.0], "deducted_profit": [38745800.0, 43755600.0, 30498599.999999985, 44000000.000000015, 44154799.99999999, 49743500.00000001, 60101700.0, null, 292000000.0], "revenue_yoy": 103.48, "revenue_qoq": null, "net_profit_yoy": 538.69, "net_profit_qoq": 314.21, "deducted_profit_yoy": 561.31, "deducted_profit_qoq": null}, {"code": "688308", "name": "欧科亿", "industry": "通用设备", "forecast_date": "2026-03-28", "forecast_type": "预增", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [263887915.53, 315421493.9200001, 315659701.88, 232217058.9799999, 301672910.35, 301806051.29999995, 419817819.0, null, null], "net_profit": [29849198.35, 30244964.32, 29738477.67, -32530236.17, 7663175.54, -6887821.57, 50350503.06, 52695342.97, 200000000.0], "deducted_profit": [13371800.0, 24404600.0, 21423500.0, -32910100.0, 1264800.0, -20412000.0, 46126100.0, null, 195000000.0], "revenue_yoy": null, "revenue_qoq": null, "net_profit_yoy": 2509.88, "net_profit_qoq": 279.54, "deducted_profit_yoy": 15317.46, "deducted_profit_qoq": null}, {"code": "688378", "name": "奥来德", "industry": "光学光电子", "forecast_date": "2026-02-28", "forecast_type": "预增", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [258233947.68, 83862407.77999997, 121694303.33000004, 69025411.44, 153115871.76, 127834416.50999999, 108054763.57, null, null], "net_profit": [95014488.65, -3201294.4100000113, 9437889.02000001, -10818267.39, 25435986.68, 1568865.1999999993, 4351201.560000002, 49052246.56, 77500000.0], "deducted_profit": [74377600.0, -10751600.0, 2517900.0, -20873800.0, 13300200.0, -9043200.0, -10375900.0, null, 59000000.0], "revenue_yoy": null, "revenue_qoq": null, "net_profit_yoy": 204.69, "net_profit_qoq": 57.99, "deducted_profit_yoy": 343.6, "deducted_profit_qoq": null}, {"code": "688578", "name": "艾力斯", "industry": "化学制药", "forecast_date": "2026-03-04", "forecast_type": "略增", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [742835715.09, 833644373.7599999, 957000020.6800003, 1024450046.3499999, 1098374566.26, 1275388013.14, 1359255073.5899997, null, 1550000000.0], "net_profit": [306052559.16, 350084290.2699999, 406811227.94000006, 366899001.5500001, 410497438.67, 640737902.75, 564541276.7100002, 565516281.8699999, 590000000.0], "deducted_profit": [301000000.0, 346000000.0, 364000000.0, 350000000.0, 396000000.0, 509000000.0000001, 546999999.9999999, null, 570000000.0], "revenue_yoy": 41.12, "revenue_qoq": null, "net_profit_yoy": 43.73, "net_profit_qoq": 4.33, "deducted_profit_yoy": 43.94, "deducted_profit_qoq": null}, {"code": "688678", "name": "福立旺", "industry": "消费电子", "forecast_date": "2026-03-12", "forecast_type": "预增", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [245993596.22, 307221548.7099999, 346358281.38, 385607941.01, 338482880.88, 366575750.74, 670148785.93, 596980172.9200001, 550000000.0], "net_profit": [27120749.53, 18682749.58, 19355401.93, -10632899.100000001, 14092204.78, -31829833.33, 51627399.78, 21321900.1, 45000000.0], "deducted_profit": [19976400.0, 15119400.0, 16054200.0, -12625300.0, 9693000.0, -34701200.0, 48585100.0, 22529600.0, 35000000.0], "revenue_yoy": 62.49, "revenue_qoq": -7.87, "net_profit_yoy": 219.33, "net_profit_qoq": 111.05, "deducted_profit_yoy": 261.09, "deducted_profit_qoq": 55.35}, {"code": "688781", "name": "视涯科技", "industry": "光学光电子", "forecast_date": "2026-03-24", "forecast_type": "减亏", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [null, null, null, null, 50693700.0, 99801991.78999999, 142259208.21, 220286163.45, 185000000.0], "net_profit": [null, null, null, null, -74092500.0, -48988581.900000006, -43450018.099999994, -45801485.00999999, -60000000.0], "deducted_profit": [null, null, null, null, -82872200.0, -60127800.0, -57000000.0, -52999999.99999997, -65000000.0], "revenue_yoy": 264.94, "revenue_qoq": -16.02, "net_profit_yoy": 19.02, "net_profit_qoq": -31.0, "deducted_profit_yoy": 21.57, "deducted_profit_qoq": -22.64}, {"code": "688802", "name": "沐曦股份", "industry": "半导体", "forecast_date": "2026-03-05", "forecast_type": "减亏", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [null, null, null, null, 320415255.58, 594515744.4200001, 321154551.9200001, 407999913.9399998, 500000000.0], "net_profit": [null, null, null, null, -232512231.0, 46618931.0, -159608816.95, -443944179.87000006, -136135750.0], "deducted_profit": [null, null, null, null, -219000000.0, 17000000.0, -191000000.0, -437000000.0000001, -130000000.0], "revenue_yoy": 56.05, "revenue_qoq": 22.55, "net_profit_yoy": 41.45, "net_profit_qoq": 69.33, "deducted_profit_yoy": 40.64, "deducted_profit_qoq": 70.25}, {"code": "688811", "name": "有研复材", "industry": "金属新材料", "forecast_date": "2026-03-20", "forecast_type": "不确定", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [null, null, null, null, 65881100.0, 174219774.74, 102047125.25999999, 232482855.94000006, 96143500.0], "net_profit": [null, null, null, null, -2516800.0, 16923410.07, 8725089.93, 44672562.53, -601400.0], "deducted_profit": [null, null, null, null, -3753000.0, 15428000.0, 6306000.0, 35769600.00000001, -2783050.0], "revenue_yoy": 45.93, "revenue_qoq": -58.64, "net_profit_yoy": 76.1, "net_profit_qoq": -101.35, "deducted_profit_yoy": 25.84, "deducted_profit_qoq": -107.78}, {"code": "688813", "name": "泰金新能", "industry": "专用设备", "forecast_date": "2026-03-30", "forecast_type": "预减", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [469621900.0, 524941400.0, 449873900.0, 749437981.54, 695178800.0, 469027357.3599999, 549007342.6400001, 681673242.31, 450000000.0], "net_profit": [24394500.0, 71723300.0, 39011000.0, 60260507.889999986, 82384000.0, 21589351.010000005, 36650448.989999995, 63487348.05000001, 40000000.0], "deducted_profit": [23002700.0, 64794000.0, 36203300.0, 59000000.0, 81638700.0, 19361300.0, 36000000.0, 67000000.0, 38000000.0], "revenue_yoy": -35.27, "revenue_qoq": -33.99, "net_profit_yoy": -51.45, "net_profit_qoq": -37.0, "deducted_profit_yoy": -53.45, "deducted_profit_qoq": -43.28}, {"code": "688820", "name": "盛合晶微", "industry": "—", "forecast_date": "2026-03-31", "forecast_type": "略增", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [null, null, null, null, 1501193200.0, 1676802980.5100002, null, null, 1725000000.0], "net_profit": [null, null, null, null, 126251500.0, 308642965.01, null, null, 142500000.0], "deducted_profit": [null, null, null, null, 126000000.0, 296000000.0, null, null, 142500000.0], "revenue_yoy": 14.91, "revenue_qoq": null, "net_profit_yoy": 12.87, "net_profit_qoq": null, "deducted_profit_yoy": 13.1, "deducted_profit_qoq": null}, {"code": "920012", "name": "创达新材", "industry": "—", "forecast_date": "2026-03-30", "forecast_type": "略增", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [82383447.11, 105792744.08999999, 108570705.41000003, 122299208.81, 100241866.29, 111225623.39999999, 111514732.22000003, 108529568.15999997, 103500000.0], "net_profit": [11354688.89, 15899414.309999999, 16061919.570000004, 17904123.599999994, 15603408.17, 17577864.29, 19572769.35, 12843187.739999995, 16200000.0], "deducted_profit": [null, null, null, null, 15316099.999999998, 16771000.000000002, 19782299.999999993, 12536100.000000007, 16000000.0], "revenue_yoy": 3.25, "revenue_qoq": -4.63, "net_profit_yoy": 3.82, "net_profit_qoq": 26.14, "deducted_profit_yoy": 4.47, "deducted_profit_qoq": 27.63}, {"code": "920028", "name": "新恒泰", "industry": "塑料", "forecast_date": "2026-03-09", "forecast_type": "略增", "quarters": ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"], "revenue": [149933536.35, 189421118.38000003, 195930313.46999997, 238933605.26000005, 171357489.23, 212928673.63000003, 218495771.44999993, 232913558.48000002, 182500000.0], "net_profit": [16790003.44, 25173651.76, 20181303.669999994, 29619365.35, 20454790.57, 30890220.659999996, 23308019.9, 36577374.92, 22000000.0], "deducted_profit": [null, null, null, null, null, null, null, null, 20000000.0], "revenue_yoy": 6.5, "revenue_qoq": -21.64, "net_profit_yoy": 7.55, "net_profit_qoq": -39.85, "deducted_profit_yoy": null, "deducted_profit_qoq": null}];
+const META = {"generated_at": "2026-03-30 22:32", "total_stocks": 34, "forecast_quarter": "2026Q1"};
+const QUARTERS = ["24Q1", "24Q2", "24Q3", "24Q4", "25Q1", "25Q2", "25Q3", "25Q4", "26Q1F"];
+
+// ─── 排序状态 ────────────────────────
+let sortCol = null, sortAsc = true;
+
+// ─── 工具函数 ────────────────────────
+function formatYuan(val) {
+    if (val === null || val === undefined || isNaN(val)) return "—";
+    const abs = Math.abs(val);
+    const sign = val < 0 ? "-" : "";
+    if (abs >= 1e8) return sign + (abs / 1e8).toFixed(2) + "亿";
+    if (abs >= 1e4) return sign + (abs / 1e4).toFixed(2) + "万";
+    return sign + val.toFixed(2) + "元";
+}
+
+function formatGrowth(val) {
+    if (val === null || val === undefined) return '<span class="growth-na">—</span>';
+    const cls = val > 0 ? "growth-positive" : val < 0 ? "growth-negative" : "growth-na";
+    const sign = val > 0 ? "+" : "";
+    return '<span class="' + cls + '">' + sign + val.toFixed(1) + '%</span>';
+}
+
+// ─── 迷你柱状图 SVG ─────────────────
+function renderSparkline(values, metricName, minZero) {
+    const W = 180, H = 50, BAR_W = 15, GAP = 5;
+    const PADDING_LEFT = 2;
+
+    const validVals = values.filter(v => v !== null && !isNaN(v));
+    if (validVals.length === 0) {
+        return '<svg width="' + W + '" height="' + H + '"><text x="' + (W/2) + '" y="' + (H/2) +
+               '" text-anchor="middle" fill="#cbd5e1" font-size="12">N/A</text></svg>';
+    }
+
+    // minZero=true 时，将负值视为 0 进行绘制（垂直轴最小值=0）
+    const displayVals = minZero ? validVals.map(v => Math.max(v, 0)) : validVals;
+    const maxAbs = minZero
+        ? Math.max(...displayVals)
+        : Math.max(...validVals.map(Math.abs));
+    if (maxAbs === 0) {
+        return '<svg width="' + W + '" height="' + H + '"><line x1="0" y1="' + (H-2) +
+               '" x2="' + W + '" y2="' + (H-2) + '" stroke="#e5e7eb" stroke-width="0.5"/></svg>';
+    }
+
+    const hasNeg = minZero ? false : validVals.some(v => v < 0);
+    const baseline = hasNeg ? H / 2 : H - 2;
+    const maxBarH = hasNeg ? (H / 2 - 3) : (H - 6);
+
+    let bars = '';
+    // baseline
+    if (hasNeg) {
+        bars += '<line x1="0" y1="' + baseline + '" x2="' + W + '" y2="' + baseline + '" stroke="#e5e7eb" stroke-width="0.5"/>';
+    }
+
+    for (let i = 0; i < 9; i++) {
+        const x = PADDING_LEFT + i * (BAR_W + GAP);
+        const v = values[i];
+        if (v === null || isNaN(v)) {
+            // 灰色占位
+            bars += '<line x1="' + x + '" y1="' + baseline + '" x2="' + (x + BAR_W) + '" y2="' + baseline + '" stroke="#ddd" stroke-width="2" stroke-dasharray="3,2"/>';
+            continue;
+        }
+        const drawV = minZero ? Math.max(v, 0) : v;
+        const barH = Math.max((Math.abs(drawV) / maxAbs) * maxBarH, minZero && v < 0 ? 2 : 2);
+        const isForecast = (i === 8);
+        let fill;
+        if (isForecast) {
+            fill = v >= 0 ? "#3b82f6" : "#f97316";
+        } else {
+            fill = v >= 0 ? "#dc2626" : "#16a34a";
+        }
+        const opacity = isForecast ? "0.9" : "0.7";
+        let y;
+        if (hasNeg) {
+            y = drawV >= 0 ? baseline - barH : baseline;
+        } else {
+            y = baseline - barH;
+        }
+        // 负值在 minZero 模式下显示为底部极小条 + 特殊颜色提示
+        if (minZero && v < 0) {
+            const negH = 3;
+            bars += '<rect x="' + x + '" y="' + (baseline - negH) + '" width="' + BAR_W + '" height="' + negH + '" fill="' + fill + '" rx="1.5" opacity="0.5"/>';
+        } else {
+            bars += '<rect x="' + x + '" y="' + y + '" width="' + BAR_W + '" height="' + barH + '" fill="' + fill + '" rx="1.5" opacity="' + opacity + '"/>';
+        }
+        if (isForecast) {
+            const fY = (minZero && v < 0) ? (baseline - 3) : y;
+            const fH = (minZero && v < 0) ? 3 : barH;
+            bars += '<rect x="' + x + '" y="' + fY + '" width="' + BAR_W + '" height="' + fH + '" fill="none" stroke="' + fill + '" stroke-width="1.5" stroke-dasharray="3,2" rx="1.5"/>';
+        }
+    }
+
+    return '<svg width="' + W + '" height="' + H + '" xmlns="http://www.w3.org/2000/svg">' + bars + '</svg>';
+}
+
+// ─── 提示框内容 ──────────────────────
+function tooltipContent(values, metricName) {
+    let lines = [];
+    for (let i = 0; i < 9; i++) {
+        const q = QUARTERS[i];
+        const v = values[i];
+        const vStr = (v !== null && !isNaN(v)) ? formatYuan(v) : "—";
+        const tag = i === 8 ? " (预)" : "";
+        lines.push(q + tag + ": " + vStr);
+    }
+    return metricName + "\n" + lines.join("\n");
+}
+
+// ─── 渲染汇总卡片 ────────────────────
+function renderSummary() {
+    const typeCounts = {};
+    STOCK_DATA.forEach(s => {
+        const t = s.forecast_type || "其他";
+        typeCounts[t] = (typeCounts[t] || 0) + 1;
+    });
+    const order = ["预增", "略增", "扭亏", "预盈", "续盈", "略减", "预减", "首亏", "续亏", "预亏"];
+    const container = document.getElementById("summary-cards");
+    let html = "";
+    order.forEach(t => {
+        if (typeCounts[t]) {
+            html += '<div class="summary-card type-' + t + '"><div class="label">' + t + '</div><div class="value">' + typeCounts[t] + '</div></div>';
+        }
+    });
+    // 其他类型
+    Object.keys(typeCounts).forEach(t => {
+        if (!order.includes(t)) {
+            html += '<div class="summary-card"><div class="label">' + t + '</div><div class="value">' + typeCounts[t] + '</div></div>';
+        }
+    });
+    container.innerHTML = html;
+}
+
+// ─── 渲染筛选器 ──────────────────────
+function renderFilters() {
+    const industries = [...new Set(STOCK_DATA.map(s => s.industry))].sort();
+    const types = [...new Set(STOCK_DATA.map(s => s.forecast_type))].sort();
+
+    const indSel = document.getElementById("filter-industry");
+    industries.forEach(ind => {
+        const opt = document.createElement("option");
+        opt.value = ind;
+        opt.textContent = ind;
+        indSel.appendChild(opt);
+    });
+
+    const typeSel = document.getElementById("filter-type");
+    types.forEach(t => {
+        const opt = document.createElement("option");
+        opt.value = t;
+        opt.textContent = t;
+        typeSel.appendChild(opt);
+    });
+
+    indSel.addEventListener("change", renderTable);
+    typeSel.addEventListener("change", renderTable);
+    document.getElementById("filter-search").addEventListener("input", renderTable);
+}
+
+// ─── 表头 ────────────────────────────
+function renderHeader() {
+    const cols = [
+        { key: "code", label: "代码", sortable: true },
+        { key: "name", label: "名称", sortable: true },
+        { key: "industry", label: "行业", sortable: true },
+        { key: "forecast_date", label: "预告日期", sortable: true },
+        { key: "forecast_type", label: "类型", sortable: true },
+        { key: "revenue_spark", label: "营收走势 (9Q)", sortable: false, group: "revenue" },
+        { key: "revenue_yoy", label: "营收同比", sortable: true, group: "revenue" },
+        { key: "revenue_qoq", label: "营收环比", sortable: true, group: "revenue" },
+        { key: "deducted_spark", label: "扣非净利润走势 (9Q)", sortable: false, group: "deducted" },
+        { key: "deducted_profit_yoy", label: "扣非同比", sortable: true, group: "deducted" },
+        { key: "deducted_profit_qoq", label: "扣非环比", sortable: true, group: "deducted" },
+        { key: "net_profit_spark", label: "归母净利润走势 (9Q)", sortable: false, group: "net" },
+        { key: "net_profit_yoy", label: "归母同比", sortable: true, group: "net" },
+        { key: "net_profit_qoq", label: "归母环比", sortable: true, group: "net" },
+    ];
+
+    const headerRow = document.getElementById("table-header");
+    let html = "";
+    cols.forEach(col => {
+        const groupClass = col.group ? " col-group-" + col.group : "";
+        const sortedClass = sortCol === col.key ? " sorted" : "";
+        const arrow = sortCol === col.key ? (sortAsc ? "&#9650;" : "&#9660;") : "&#9650;";
+        if (col.sortable) {
+            html += '<th class="' + groupClass + sortedClass + '" onclick="doSort(\'' + col.key + '\')">' +
+                    col.label + '<span class="sort-arrow">' + arrow + '</span></th>';
+        } else {
+            html += '<th class="' + groupClass + '">' + col.label + '</th>';
+        }
+    });
+    headerRow.innerHTML = html;
+}
+
+// ─── 排序 ────────────────────────────
+window.doSort = function(key) {
+    if (sortCol === key) {
+        sortAsc = !sortAsc;
+    } else {
+        sortCol = key;
+        sortAsc = true;
+    }
+    renderHeader();
+    renderTable();
+};
+
+// ─── 渲染表格 ────────────────────────
+function renderTable() {
+    const indFilter = document.getElementById("filter-industry").value;
+    const typeFilter = document.getElementById("filter-type").value;
+    const searchText = document.getElementById("filter-search").value.trim().toLowerCase();
+
+    let filtered = STOCK_DATA.filter(s => {
+        if (indFilter && s.industry !== indFilter) return false;
+        if (typeFilter && s.forecast_type !== typeFilter) return false;
+        if (searchText && !s.name.toLowerCase().includes(searchText) && !s.code.includes(searchText)) return false;
+        return true;
+    });
+
+    // 排序
+    if (sortCol) {
+        filtered.sort((a, b) => {
+            let va = a[sortCol], vb = b[sortCol];
+            if (va === null || va === undefined) return 1;
+            if (vb === null || vb === undefined) return -1;
+            if (typeof va === "string") {
+                return sortAsc ? va.localeCompare(vb, "zh") : vb.localeCompare(va, "zh");
+            }
+            return sortAsc ? (va - vb) : (vb - va);
+        });
+    }
+
+    document.getElementById("shown-count").textContent = filtered.length;
+
+    const tbody = document.getElementById("table-body");
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="14" class="no-data">未找到匹配的数据</td></tr>';
+        return;
+    }
+
+    let html = "";
+    filtered.forEach(s => {
+        html += "<tr>";
+        // 代码
+        html += '<td><span class="stock-code">' + s.code + '</span></td>';
+        // 名称
+        html += '<td class="stock-name">' + s.name + '</td>';
+        // 行业
+        html += '<td><span class="industry-tag">' + s.industry + '</span></td>';
+        // 预告日期
+        html += '<td>' + s.forecast_date + '</td>';
+        // 类型
+        html += '<td><span class="forecast-type ft-' + s.forecast_type + '">' + s.forecast_type + '</span></td>';
+
+        // 营收走势
+        html += '<td class="sparkline-cell"><div class="sparkline-wrapper">' +
+                renderSparkline(s.revenue, "营收", false) +
+                '<div class="sparkline-tooltip">' + tooltipContent(s.revenue, "营收") + '</div></div></td>';
+        // 营收同比/环比
+        html += '<td class="growth-cell">' + formatGrowth(s.revenue_yoy) + '</td>';
+        html += '<td class="growth-cell">' + formatGrowth(s.revenue_qoq) + '</td>';
+
+        // 扣非走势
+        html += '<td class="sparkline-cell"><div class="sparkline-wrapper">' +
+                renderSparkline(s.deducted_profit, "扣非净利润", true) +
+                '<div class="sparkline-tooltip">' + tooltipContent(s.deducted_profit, "扣非净利润") + '</div></div></td>';
+        // 扣非同比/环比
+        html += '<td class="growth-cell">' + formatGrowth(s.deducted_profit_yoy) + '</td>';
+        html += '<td class="growth-cell">' + formatGrowth(s.deducted_profit_qoq) + '</td>';
+
+        // 归母走势
+        html += '<td class="sparkline-cell"><div class="sparkline-wrapper">' +
+                renderSparkline(s.net_profit, "归母净利润", true) +
+                '<div class="sparkline-tooltip">' + tooltipContent(s.net_profit, "归母净利润") + '</div></div></td>';
+        // 归母同比/环比
+        html += '<td class="growth-cell">' + formatGrowth(s.net_profit_yoy) + '</td>';
+        html += '<td class="growth-cell">' + formatGrowth(s.net_profit_qoq) + '</td>';
+
+        html += "</tr>";
+    });
+    tbody.innerHTML = html;
+}
+
+// ─── 初始化 ──────────────────────────
+renderSummary();
+renderFilters();
+renderHeader();
+renderTable();
+</script>
+</body>
+</html>
